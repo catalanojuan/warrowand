@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #canvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid black;
+        }
+        .container{
+            width: 100%;
+            overflow: hidden;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <canvas id="canvas" width="1300px" height="620px"></canvas>
+</div>
+<br>
+<input type="color" id="colorPicker">
+<button onclick="clearCanvas()">Clear</button>
+<br><br>
+<script>
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+    var colorPicker = document.getElementById('colorPicker');
+    var currentColor = 'red';
+    var isPainting = false;
+    var lastX = 0;
+    var lastY = 0;
+    var w_points = [];
+
+    var socket = new WebSocket("ws://localhost:8080");
+    socket.onopen = function() {
+        console.log("WebSocket connected");
+    };
+
+    function sendData(position=0, color='white', clear=false) {
+        if (clear){
+            socket.send(JSON.stringify(['tap', {clear: true}]));
+            return;
+        }
+        socket.send(JSON.stringify(['tap', { position: position, color: color }]));
+    }
+
+    colorPicker.addEventListener('change', function(event) {
+        currentColor = event.target.value;
+    });
+
+    canvas.addEventListener('mousedown', function(event) {
+        isPainting = true;
+        lastX = event.clientX - canvas.offsetLeft;
+        lastY = event.clientY - canvas.offsetTop;
+        paintPoint(lastX, lastY);
+    });
+
+    canvas.addEventListener('mouseup', function(event) {
+        isPainting = false;
+    });
+
+    canvas.addEventListener('mousemove', function(event) {
+        if (isPainting) {
+            var x = event.clientX - canvas.offsetLeft;
+            var y = event.clientY - canvas.offsetTop;
+            paintPoint(x, y);
+            lastX = x;
+            lastY = y;
+        }
+    });
+
+    canvas.addEventListener('touchstart', function(event) {
+        isPainting = true;
+        lastX = event.touches[0].clientX - canvas.offsetLeft;
+        lastY = event.touches[0].clientY - canvas.offsetTop;
+        paintPoint(lastX, lastY);
+    });
+
+    canvas.addEventListener('touchend', function(event) {
+        isPainting = false;
+    });
+
+    canvas.addEventListener('touchmove', function(event) {
+        if (isPainting) {
+            var x = event.touches[0].clientX - canvas.offsetLeft;
+            var y = event.touches[0].clientY - canvas.offsetTop;
+            paintPoint(x, y);
+            lastX = x;
+            lastY = y;
+        }
+    });
+
+    function paintPoint(x, y) {
+        for (var i = 0; i < w_points.length; i++) {
+            if (x >= w_points[i].x - 5 && x <= w_points[i].x + 5 && y >= w_points[i].y - 5 && y <= w_points[i].y + 5) {
+                context.fillStyle = currentColor;
+                context.fillRect(w_points[i].x - 5, w_points[i].y - 5, 10, 10);
+                sendData(w_points[i].position, currentColor);
+                break;
+            }
+        }
+    }
+
+    function paintLine(lastX, lastY, currentX, currentY) {
+        for (var i = 0; i < w_points.length; i++) {
+            if (lastX >= w_points[i].x - 5 && lastX <= w_points[i].x + 5 && lastY >= w_points[i].y - 5
+                && lastY <= w_points[i].y + 5
+                && currentX >= w_points[i].x - 5 && currentX <= w_points[i].x + 5 && currentY >= w_points[i].y - 5
+                && currentY <= w_points[i].y + 5) {
+                context.beginPath();
+                context.strokeStyle = currentColor;
+                context.lineWidth = 10;
+                context.moveTo(lastX, lastY);
+                context.lineTo(currentX, currentY);
+                context.closePath();
+                context.stroke();
+                break;
+            }
+        }
+    }
+
+    function clearCanvas() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        drawW();
+        sendData(0, 'white', true);
+    }
+    function drawPoints(startX, startY, endX, endY, numPoints, width, pos_range, color='black', savePoint=false) {
+        // Calculate the x and y increments for each point
+        const xIncrement = (endX - startX) / (numPoints - 1);
+        const yIncrement = (endY - startY) / (numPoints - 1);
+
+        // Draw the points
+        for (let i = 0; i < numPoints; i++) {
+            const x = startX + i * xIncrement;
+            const y = startY + i * yIncrement;
+            if (savePoint){
+                let position = pos_range.pop();
+                w_points.push({position: position, x: x, y: y});
+            }
+            context.fillStyle = color;
+            context.fillRect(x - width / 2, y - width / 2, width, width);
+            context.fillStyle = currentColor;
+        }
+    }
+    function drawW(){
+        // pata left
+        drawPoints(100, 100, 405, 600, 240, 1, _.range(60, 300), 'black', true);
+
+        // 2da tira hasta tramo arriba derecho
+        drawPoints(705, 150, 406, 600, 240, 1, _.range(300, 540), 'black', true);
+        drawPoints(600, 150, 704, 150, 60, 1, _.range(540, 600), 'black', true);
+
+        // 3ra tira, arrancando arriba tramo izquierdo
+        drawPoints(495, 150, 805, 600, 240, 1, _.range(600, 840), 'black', true);
+        drawPoints(599, 150, 496, 150, 60, 1, _.range(840, 900), 'black', true);
+        drawPoints(1100, 100, 805, 600, 240, 1, _.range(960, 1200), 'black', true);
+    }
+    drawW();
+</script>
+</body>
+</html>
