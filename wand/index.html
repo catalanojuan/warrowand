@@ -16,7 +16,7 @@
 </head>
 <body>
 <div class="container">
-    <canvas id="canvas" width="1300px" height="620px"></canvas>
+    <canvas id="canvas" width="1200px" height="620px"></canvas>
 </div>
 <br>
 <input type="color" id="colorPicker">
@@ -32,16 +32,28 @@
     var lastY = 0;
     var w_points = [];
 
-    var socket = new WebSocket("ws://localhost:8080");
+    var socket = new WebSocket("ws://192.168.1.231:8080");
     socket.onopen = function() {
         console.log("WebSocket connected");
     };
 
-    function sendData(position=0, color='white', clear=false) {
-        if (clear){
-            socket.send(JSON.stringify(['tap', {clear: true}]));
-            return;
-        }
+    function getRGBFromHex(hex) {
+        var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+            return r + r + g + g + b + b;
+        });
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [        parseInt(result[1], 16),
+            parseInt(result[2], 16),
+            parseInt(result[3], 16)
+        ] : [0, 0, 0];
+    }
+    function sendClear(){
+        socket.send(JSON.stringify(['tap', {clear: true}]));
+        return;
+    }
+    function sendData(position=0) {
+        let color = getRGBFromHex(currentColor);
         socket.send(JSON.stringify(['tap', { position: position, color: color }]));
     }
 
@@ -50,6 +62,7 @@
     });
 
     canvas.addEventListener('mousedown', function(event) {
+        event.preventDefault();
         isPainting = true;
         lastX = event.clientX - canvas.offsetLeft;
         lastY = event.clientY - canvas.offsetTop;
@@ -57,10 +70,12 @@
     });
 
     canvas.addEventListener('mouseup', function(event) {
+        event.preventDefault();
         isPainting = false;
     });
 
     canvas.addEventListener('mousemove', function(event) {
+        event.preventDefault();
         if (isPainting) {
             var x = event.clientX - canvas.offsetLeft;
             var y = event.clientY - canvas.offsetTop;
@@ -71,6 +86,7 @@
     });
 
     canvas.addEventListener('touchstart', function(event) {
+        event.preventDefault();
         isPainting = true;
         lastX = event.touches[0].clientX - canvas.offsetLeft;
         lastY = event.touches[0].clientY - canvas.offsetTop;
@@ -78,10 +94,12 @@
     });
 
     canvas.addEventListener('touchend', function(event) {
+        event.preventDefault();
         isPainting = false;
     });
 
     canvas.addEventListener('touchmove', function(event) {
+        event.preventDefault();
         if (isPainting) {
             var x = event.touches[0].clientX - canvas.offsetLeft;
             var y = event.touches[0].clientY - canvas.offsetTop;
@@ -102,29 +120,12 @@
         }
     }
 
-    function paintLine(lastX, lastY, currentX, currentY) {
-        for (var i = 0; i < w_points.length; i++) {
-            if (lastX >= w_points[i].x - 5 && lastX <= w_points[i].x + 5 && lastY >= w_points[i].y - 5
-                && lastY <= w_points[i].y + 5
-                && currentX >= w_points[i].x - 5 && currentX <= w_points[i].x + 5 && currentY >= w_points[i].y - 5
-                && currentY <= w_points[i].y + 5) {
-                context.beginPath();
-                context.strokeStyle = currentColor;
-                context.lineWidth = 10;
-                context.moveTo(lastX, lastY);
-                context.lineTo(currentX, currentY);
-                context.closePath();
-                context.stroke();
-                break;
-            }
-        }
-    }
-
     function clearCanvas() {
         context.clearRect(0, 0, canvas.width, canvas.height);
         drawW();
-        sendData(0, 'white', true);
+        sendClear();
     }
+
     function drawPoints(startX, startY, endX, endY, numPoints, width, pos_range, color='black', savePoint=false) {
         // Calculate the x and y increments for each point
         const xIncrement = (endX - startX) / (numPoints - 1);
