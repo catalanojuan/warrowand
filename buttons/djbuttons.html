@@ -1,0 +1,35 @@
+<html>
+<head>
+    <style>
+        .button-container{
+            text-align: center;
+            width: 100%;
+            margin: auto;
+        }
+        body{
+            background-color: black;
+        }
+        img{
+            width: 200px;
+            margin: 100px 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="button-container">
+    <img id='drum' src="./drumbutton.png"/>
+    <img id='party' src="./partybutton.png"/>
+</div>
+<script>
+    var drumButton = document.getElementById('drum');
+    var socket = new WebSocket("ws://192.168.1.231:8080");
+    socket.onopen = function() {
+        console.log("WebSocket connected");
+    };
+    drumButton.addEventListener('click', function(event){
+        event.preventDefault();
+        socket.send(JSON.stringify(['tap', {}]));
+    })
+</script>
+</body>
+</html>
