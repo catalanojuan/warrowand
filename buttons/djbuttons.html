@@ -22,13 +22,29 @@
 </div>
 <script>
     var drumButton = document.getElementById('drum');
-    var socket = new WebSocket("ws://192.168.1.231:8080");
+    var partyButton = document.getElementById('party');
+    var socket = new WebSocket("ws://192.168.6.167:8080");
     socket.onopen = function() {
         console.log("WebSocket connected");
     };
+    partyButton.addEventListener('click', function(event){
+        event.preventDefault();
+        socket.send(JSON.stringify(['tap', {'client': 'party'}]));
+    })
+
     drumButton.addEventListener('click', function(event){
         event.preventDefault();
-        socket.send(JSON.stringify(['tap', {}]));
+        socket.send(JSON.stringify(['tap', {'client': 'drum'}]));
+    })
+
+    partyButton.addEventListener('touchstart', function(event){
+        event.preventDefault();
+        socket.send(JSON.stringify(['tap', {'client': 'party'}]));
+    })
+
+    drumButton.addEventListener('touchstart', function(event){
+        event.preventDefault();
+        socket.send(JSON.stringify(['tap', {'client': 'drum'}]));
     })
 </script>
 </body>
