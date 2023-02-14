@@ -22,6 +22,7 @@
 <input type="color" id="colorPicker">
 <button onclick="clearCanvas()">Clear</button>
 <button onclick="sendMove()">Move!</button>
+<button onclick="sendStop()">Stop!</button>
 <br><br>
 <script>
     var canvas = document.getElementById('canvas');
@@ -37,6 +38,7 @@
     socket.onopen = function() {
         console.log("WebSocket connected");
     };
+
 
     function getRGBFromHex(hex) {
         var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -56,6 +58,10 @@
 
     function sendMove(){
         socket.send(JSON.stringify(['tap', {move: true}]));
+        return;
+    }
+    function sendStop(){
+        socket.send(JSON.stringify(['tap', {move: false}]));
         return;
     }
 
