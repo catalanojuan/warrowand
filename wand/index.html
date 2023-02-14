@@ -12,7 +12,7 @@
             overflow: hidden;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="../lodash.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -21,21 +21,24 @@
 <br>
 <input type="color" id="colorPicker">
 <button onclick="clearCanvas()">Clear</button>
+<button onclick="sendMove()">Move!</button>
+<button onclick="sendStop()">Stop!</button>
 <br><br>
 <script>
     var canvas = document.getElementById('canvas');
     var context = canvas.getContext('2d');
     var colorPicker = document.getElementById('colorPicker');
-    var currentColor = 'red';
+    var currentColor = 'black';
     var isPainting = false;
     var lastX = 0;
     var lastY = 0;
     var w_points = [];
 
-    var socket = new WebSocket("ws://192.168.1.231:8080");
+    var socket = new WebSocket("ws://192.168.6.167:8080");
     socket.onopen = function() {
         console.log("WebSocket connected");
     };
+
 
     function getRGBFromHex(hex) {
         var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -52,6 +55,16 @@
         socket.send(JSON.stringify(['tap', {clear: true}]));
         return;
     }
+
+    function sendMove(){
+        socket.send(JSON.stringify(['tap', {move: true}]));
+        return;
+    }
+    function sendStop(){
+        socket.send(JSON.stringify(['tap', {move: false}]));
+        return;
+    }
+
     function sendData(position=0) {
         let color = getRGBFromHex(currentColor);
         socket.send(JSON.stringify(['tap', { position: position, color: color }]));
@@ -155,6 +168,8 @@
         // 3ra tira, arrancando arriba tramo izquierdo
         drawPoints(495, 150, 805, 600, 240, 1, _.range(600, 840), 'black', true);
         drawPoints(599, 150, 496, 150, 60, 1, _.range(840, 900), 'black', true);
+
+        // pata right
         drawPoints(1100, 100, 805, 600, 240, 1, _.range(960, 1200), 'black', true);
     }
     drawW();
